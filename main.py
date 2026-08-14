@@ -1,4 +1,5 @@
 from src.data_loader import load_dataset
+from src.data_cleaning import remove_duplicates, save_cleaned_dataset
 
 def main():
     dataset_path = "data/audi.csv"
@@ -26,5 +27,13 @@ def main():
     print("\nStatistical Summary:")
     print(df.describe())
 
+    df = remove_duplicates(df)
+
+    print("\nMissing Values After Duplicate Removal:")
+    print(df.isnull().sum())
+
+    save_cleaned_dataset(df, "data/cleaned_audi.csv")
+
 if __name__ == "__main__":
     main()
+
