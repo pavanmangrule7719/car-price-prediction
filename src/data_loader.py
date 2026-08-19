@@ -1,36 +1,24 @@
+from pathlib import Path
 import pandas as pd
-import pathlib
 
-Supported_Extensions = (".csv",".xlsx",".json",".parquet")
 
-def validate_dataset_file(dataset_path):
-    path = pathlib.Path(dataset_path)
+SUPPORTED_EXTENSIONS = [".csv", ".xlsx", ".json", ".parquet"]
+
+
+def load_dataset(file_path):
+    path = Path(file_path)
 
     if not path.exists():
-        raise FileNotFoundError("Dataset not found. Please check the path.")
+        raise FileNotFoundError(f"Dataset not found: {file_path}")
 
     if not path.is_file():
-        raise ValueError("The provided path is not a dataset file.")
+        raise ValueError(f"Path is not a file: {file_path}")
 
-    if path.suffix.lower() not in Supported_Extensions:
-        raise ValueError(f"Unsupported dataset format: {path.suffix}")
+    if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        raise ValueError(f"Unsupported file format: {path.suffix}")
 
     if path.stat().st_size == 0:
         raise ValueError("Dataset file is empty.")
-
-    try:
-        with open(dataset_path,"rb"):
-            pass
-    except PermissionError:
-        raise PermissionError("Permission denied. Cannot read dataset.")
-
-    return True
-
-def load_dataset(dataset_path):
-
-    validate_dataset_file(dataset_path)
-
-    path = pathlib.Path(dataset_path)
 
     if path.suffix.lower() == ".csv":
         return pd.read_csv(path)

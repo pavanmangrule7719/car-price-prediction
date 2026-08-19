@@ -1,12 +1,16 @@
 def remove_duplicates(df):
-    duplicate_count = df.duplicated().sum()
-    print(f"Duplicate rows found: {duplicate_count}")
-    df = df.drop_duplicates()
-    print(f"Duplicate rows remaining: {df.duplicated().sum()}")
+    before = len(df)
+
+    df = df.drop_duplicates().reset_index(drop=True)
+
+    after = len(df)
+
+    print(f"Removed duplicates: {before - after}")
+
     return df
 
-def save_cleaned_dataset(df, output_path):
-    df.to_csv(output_path, index=False)
 
-    print(f"\nCleaned dataset saved successfully: {output_path}")
-    print(f"Cleaned dataset shape: {df.shape}")
+def save_cleaned_dataset(df, file_path):
+    df.to_csv(file_path, index=False)
+
+    print(f"Cleaned dataset saved: {file_path}")
