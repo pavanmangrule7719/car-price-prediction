@@ -1,5 +1,7 @@
-from src.data_loader import load_dataset
+import os
+import pandas as pd
 
+from src.data_loader import load_dataset
 from src.data_cleaning import (
     remove_duplicates,
     save_cleaned_dataset
@@ -20,16 +22,39 @@ from src.model_training import (
 
 from src.evaluation import evaluate_model
 from src.model_selection import select_best_model
-from src.model_saving import save_model
+
+from src.model_saving import (
+    save_model,
+    load_model
+)
+
+from src.prediction import predict_price
 
 from sklearn.model_selection import train_test_split
 
+MODEL_PATH = "models/final_model.pkl"
 
-def main():
+def get_user_input():
 
-    # ==========================================
-    # PHASE 1 - DATASET + EDA
-    # ==========================================
+    print("\n========== CAR DETAILS ==========")
+
+    car = {
+        "model": input("Model: "),
+        "year": int(input("Year: ")),
+        "mileage": float(input("Mileage: ")),
+        "transmission": input("Transmission: "),
+        "fuelType": input("Fuel Type: "),
+        "tax": float(input("Tax: ")),
+        "mpg": float(input("MPG: ")),
+        "engineSize": float(input("Engine Size: "))
+    }
+
+    return pd.DataFrame([car])
+
+
+def train_model():
+
+    print("\n🚀 Training model...")
 
     dataset_path = "data/audi.csv"
 
@@ -37,7 +62,9 @@ def main():
 
     print("✅ Dataset loaded successfully.")
 
-    print("\nShape:")
+    print("\n========== DATASET INFORMATION ==========")
+
+    print("Shape:")
     print(df.shape)
 
     print("\nHead:")
@@ -58,11 +85,6 @@ def main():
     print("\nStatistical Summary:")
     print(df.describe())
 
-
-    # ==========================================
-    # PHASE 2 - DATA CLEANING
-    # ==========================================
-
     df = remove_duplicates(df)
 
     save_cleaned_dataset(
@@ -70,19 +92,9 @@ def main():
         "data/cleaned_audi.csv"
     )
 
-
-    # ==========================================
-    # PHASE 3 - PREPROCESSING
-    # ==========================================
-
     X, y = split_features_target(df)
 
     preprocessor = create_preprocessor()
-
-
-    # ==========================================
-    # PHASE 4 - TRAIN TEST SPLIT
-    # ==========================================
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -91,12 +103,7 @@ def main():
         random_state=42
     )
 
-    # ==========================================
-    # PHASE 5 + 6 - MULTIPLE MODELS
-    # ==========================================
-
     results = {}
-
 
     # ---------- Linear Regression ----------
 
@@ -121,7 +128,6 @@ def main():
     print("\n--- Linear Regression ---")
     print(linear_metrics)
 
-
     # ---------- Decision Tree ----------
 
     tree_results = train_decision_tree(
@@ -139,22 +145,15 @@ def main():
             result["predictions"]
         )
 
-        name = (
-            f"Decision Tree "
-            f"Depth {result['max_depth']}"
-        )
+        name = f"Decision Tree Depth {result['max_depth']}"
 
         results[name] = {
             "model": result["model"],
             "metrics": metrics
         }
 
-        print(
-            f"\n--- {name} ---"
-        )
-
+        print(f"\n--- {name} ---")
         print(metrics)
-
 
     # ---------- Random Forest ----------
 
@@ -173,26 +172,15 @@ def main():
             result["predictions"]
         )
 
-        name = (
-            f"Random Forest "
-            f"{result['n_estimators']} Trees"
-        )
+        name = f"Random Forest {result['n_estimators']} Trees"
 
         results[name] = {
             "model": result["model"],
             "metrics": metrics
         }
 
-        print(
-            f"\n--- {name} ---"
-        )
-
+        print(f"\n--- {name} ---")
         print(metrics)
-
-
-    # ==========================================
-    # PHASE 7 - GRID SEARCH
-    # ==========================================
 
     grid_result = train_random_forest_grid_search(
         preprocessor,
@@ -213,7 +201,6 @@ def main():
     }
 
     print("\n--- GridSearchCV ---")
-
     print("Best Parameters:")
     print(grid_result["best_params"])
 
@@ -222,11 +209,6 @@ def main():
 
     print("Test Metrics:")
     print(grid_metrics)
-
-
-    # ==========================================
-    # PHASE 7 - RANDOMIZED SEARCH
-    # ==========================================
 
     random_result = train_random_forest_random_search(
         preprocessor,
@@ -247,7 +229,6 @@ def main():
     }
 
     print("\n--- RandomizedSearchCV ---")
-
     print("Best Parameters:")
     print(random_result["best_params"])
 
@@ -256,11 +237,6 @@ def main():
 
     print("Test Metrics:")
     print(random_metrics)
-
-
-    # ==========================================
-    # PHASE 6 - MODEL COMPARISON
-    # ==========================================
 
     print("\n================================")
     print("MODEL COMPARISON")
@@ -273,14 +249,7 @@ def main():
             f"R² = {result['metrics']['R2']:.4f}"
         )
 
-
-    # ==========================================
-    # PHASE 8 - BEST MODEL
-    # ==========================================
-
-    best_model_result = select_best_model(
-        results
-    )
+    best_model_result = select_best_model(results)
 
     print("\n================================")
     print("BEST MODEL")
@@ -296,27 +265,50 @@ def main():
         best_model_result["r2"]
     )
 
-
-    # ==========================================
-    # PHASE 8 - SAVE MODEL
-    # ==========================================
-
     save_model(
         best_model_result["model"],
-        "models/final_model.pkl"
+        MODEL_PATH
     )
 
+    print("\n✅ Model training completed.")
+    print(f"✅ Model saved at: {MODEL_PATH}")
+
+    return best_model_result["model"]
+
+def prediction_system(model):
+
+    car = get_user_input()
+
+    prediction = predict_price(
+        model,
+        car
+    )
+
+    print("\n================================")
+    print("PREDICTION")
+    print("================================")
 
     print(
-        "\n✅ Phase 8 completed."
+        f"Predicted Price: £{prediction[0]:,.2f}"
     )
 
-    print(
-        "Final model saved at:"
-        " models/final_model.pkl"
-    )
+def main():
 
+    if os.path.exists(MODEL_PATH):
+
+        print("✅ Existing model found.")
+        print("⚡ Loading model instead of training...")
+
+        model = load_model(MODEL_PATH)
+
+    else:
+
+        print("⚠️ Model not found.")
+        print("🚀 Training model for the first time...")
+
+        model = train_model()
+
+    prediction_system(model)
 
 if __name__ == "__main__":
     main()
-    

@@ -30,5 +30,5 @@ prediction = predict_price(
 
 
 print(
-    f"Predicted Price: £{prediction[0]:.2f}"
+    f"Predicted Price: ${prediction[0]:.2f}"
 )
